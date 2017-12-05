@@ -33,6 +33,11 @@ open class Client: NSObject {
 
     let queue = DispatchQueue(label: "com.parse.livequery", attributes: [])
 
+    var reconnectionTimer: Timer?
+    var connectHandlers: [() -> Void] = []
+    var disconnectHandlers: [(NSError?) -> Void] = []
+    public var autoReconnectInterval: TimeInterval? = 5.0
+    
     /**
      Creates a Client which automatically attempts to connect to the custom parse-server URL set in Parse.currentConfiguration().
      */
@@ -247,5 +252,16 @@ extension Client {
         socket.disconnect()
         self.socket = nil
         userDisconnected = true
+    }
+}
+
+extension Client {
+    
+    public func handleConnect(handler: @escaping () -> Void) {
+        connectHandlers.append(handler)
+    }
+    
+    public func handleDisconnect(handler: @escaping (NSError?) -> Void) {
+        disconnectHandlers.append(handler)
     }
 }

@@ -324,6 +324,14 @@ extension Client {
             return record.query == query && handler.handler === subscriptionHandler
         }
     }
+    
+    @objc public func addConnectHandler(handler: @escaping () -> Void) {
+        connectHandlers.append(handler)
+    }
+    
+    @objc public func addDisconnectHandler(handler: @escaping (NSError?) -> Void) {
+        disconnectHandlers.append(handler)
+    }
 }
 
 // HACK: Another compiler bug - if you have a required initializer with a generic type, the compiler simply refuses to 

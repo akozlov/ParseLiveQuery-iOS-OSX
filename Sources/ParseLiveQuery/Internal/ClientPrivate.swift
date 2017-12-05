@@ -131,24 +131,33 @@ extension Client: WebSocketDelegate {
     public func websocketDidConnect(socket: WebSocket) {
         let sessionToken = PFUser.current()?.sessionToken ?? ""
         _ = self.sendOperationAsync(.connect(applicationId: applicationId, sessionToken: sessionToken, clientKey: clientKey))
+        
+        connectHandlers.forEach { $0() }
+        
+        reconnectionTimer?.invalidate()
+        reconnectionTimer = nil
     }
 
     public func websocketDidDisconnect(socket: WebSocket, error: NSError?) {
-        if shouldPrintWebSocketLog { print("error: \(String(describing: error))") }
+        if shouldPrintWebSocketLog {
+            if let err = error {
+                print("error: \(err.localizedDescription)")
+            }
+        }
 
-        // TODO: Better retry logic, unless `disconnect()` was explicitly called
-        if !userDisconnected {
-            reconnect()
+        disconnectHandlers.forEach { $0(error) }
+        
+        if !userDisconnected && autoReconnectInterval != nil {
+            reconnectionTimer = Timer(timeInterval: autoReconnectInterval!, target: self, selector: #selector(reconnect(by:)), userInfo: nil, repeats: false)
+            RunLoop.main.add(reconnectionTimer!, forMode: .defaultRunLoopMode)
         }
     }
-
-    public func webSocket(_ webSocket: WebSocket, didCloseWithCode code: Int, reason: String?, wasClean: Bool) {
-        if shouldPrintWebSocketLog { print("code: \(code) reason: \(String(describing: reason))") }
-
-        // TODO: Better retry logic, unless `disconnect()` was explicitly called
-        if !userDisconnected {
+    
+    func reconnect(by timer: Timer) {
+        if !userDisconnected && autoReconnectInterval != nil {
             reconnect()
         }
+        reconnectionTimer = nil
     }
 }
 
